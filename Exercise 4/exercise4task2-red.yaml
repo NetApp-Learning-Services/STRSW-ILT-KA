@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: red
+spec:
+  containers:
+  - image: nginx
+    name: red
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+  tolerations:
+  - key: app
+    value: red
+    effect: NoSchedule
+    operator: Equal
