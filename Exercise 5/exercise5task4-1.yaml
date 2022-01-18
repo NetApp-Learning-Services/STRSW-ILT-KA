@@ -21,15 +21,10 @@ spec:
         image: nginx:stable-alpine
         ports:
         - containerPort: 80
-        volumeMounts:
-        - name: www
-          mountPath: /usr/share/nginx/html
-  volumeClaimTemplates:
-  - metadata:
-      name: www
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: standard
-      resources:
-        requests:
-          storage: 1Gi
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
