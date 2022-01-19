@@ -1,14 +1,16 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-api-from-admin
+  name: allow-backend-to-frontend
+  namespace: backend
 spec:
   podSelector:
     matchLabels:
       app: api
   ingress:
   - from:
-    - namespaceSelector:
-        matchLabels:
-          role: admin
+    - namespaceSelector: 
+       matchLabels:
+        role: frontend
+      
 
