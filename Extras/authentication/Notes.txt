@@ -1,0 +1,373 @@
+1. Identify the location of the K8s Certificate Authority using API-Server:
+
+    - kube-apiserver
+    - --advertise-address=192.168.0.63
+    - --allow-privileged=true
+    - --authorization-mode=Node,RBAC
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --enable-admission-plugins=NodeRestriction
+    - --enable-bootstrap-token-auth=true
+    - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
+    - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
+    - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
+    - --etcd-servers=https://127.0.0.1:2379
+    - --insecure-port=0
+    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
+    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
+    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
+    - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
+    - --requestheader-allowed-names=front-proxy-client
+    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
+    - --requestheader-extra-headers-prefix=X-Remote-Extra-
+    - --requestheader-group-headers=X-Remote-Group
+    - --requestheader-username-headers=X-Remote-User
+    - --secure-port=6443
+    - --service-account-key-file=/etc/kubernetes/pki/sa.pub
+    - --service-cluster-ip-range=10.96.0.0/12
+    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+
+2. Create a user private key:
+
+    [root@rhel3 pki]# openssl genrsa -out curtis.key 2048
+    Generating RSA private key, 2048 bit long modulus
+    ..........................................................................................................................................................+++
+    ...............................+++
+    e is 65537 (0x10001)
+
+3.  Create a user certificate request:
+
+    [root@rhel3 pki]# openssl req -new -key curtis.key -out curtis.csr -subj "/CN=curtis/O=curtis"
+
+4. From the tls-cert path:
+
+    [root@rhel3 pki]# pwd
+    /etc/kubernetes/pki
+
+5.  Generate the user certificate using K8s private key and K8s cert:  
+
+    [root@rhel3 pki]# openssl x509 -req -in curtis.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out curtis.crt -days 365
+    Signature ok
+    subject=/CN=curtis/O=curtis
+    Getting CA Private Key
+
+6.  Convert the certificate file to base64:
+
+    [root@rhel3 pki]# cat curtis.crt | base64 | tr -d '\n'
+
+7.  Convert the key file to base64:
+
+    [root@rhel3 pki]# cat curtis.key | base64 | tr -d '\n'
+
+8.  Modify the kubeconfig and include the user's base64 certificate and key:
+
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN5RENDQWJDZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRFNU1Ea3dPVEEwTURNMU1Wb1hEVEk1TURrd05qQTBNRE0xTVZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBT0oyCi9kaWhMWnA3WnM1YkEwQllacEw1WnpmV0tRenBMU0pUUEtIRVBiNzl0ZmVlZ0Z6MDRObzBEOWtvYzFHM2xNVmgKbjNxSW1qdS8xN3M2OTBQMFpCVUNiR2h4VGkrWUphT0w2T0tuVmZsWWRSSHJTYkttSldDU0V0NEpnYWNOV3h1NQo0N3JkQ1prUVdUN0pSTWovZkZ2Snhxc0ZuRUlsR2xOQ3R2OW83Y2MrQVBxaFN5NWNKb0JhejVxRUhaZTJYZktuClR0UXRlM210WWYyQUVWSEhCMkxUdHpZUWlyNkJyenZDc3NVMkZCZkU0SHU2cExNdFlVem9jZ2FZRGI4MzN3eFMKMXE4NDh3a0N2ZmlLUTFJWHpaUGRkYTd4MW10ZjI4dkFQOGh5ZitTdFlzWDlDTi92dkIwK2pSWGxCcFRVTm1XVQoyV0ZJb0c4Y2IrOW1ML0NqNmZNQ0F3RUFBYU1qTUNFd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFNMjdmYXJ1TEIxMFg4aXdsQVpNY0laUGcvcjAKS1VQQkhuNUorczNiZndYZXJickllS1FKYjFNUmFQOEFJMlR3d1c2V2gvNmw3YTRWVTB0cjg0Rmx5Y3RoVVhjSgpGN1dVS2hwMjhsOTBMY3JmWm4rQWo1V2FUd1Q5dWM3NjJOeEFMcUxMdzBJY2huZXE5Q0F1QTRlbnpUbjFENzRqClJOcmttVk9uS0R5U0FLRjlOVHVHc2F6SndFdTFoeDFTT3NqNkxrQ21Gcm9QN0ZKdWpONzI1YXk2UE9wTStpQUEKamVhdzFKVkRUem5sQTd3MlJvQkpoK1ZXT2xRUmtoVTdjaFBhZEJ2L3YzeVVrem9UaE9Fb29PWmhuRVhmWjA2bApWZG9VbGRPbVZndUpISFlGMkMyRC9adThBM1JNaFJYcU96L3FDays4UjZaQWR2YUZKYWMwbndZS3lHST0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        server: https://192.168.0.63:6443
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        namespace: default
+        user: curtis
+    name: curtis@kubernetes
+    - context:
+        cluster: kubernetes
+        namespace: kube-system
+        user: kubernetes-admin
+    name: kubernetes-admin@kubernetes
+    current-context: kubernetes-admin@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: curtis
+    user:
+        client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNvakNDQVlvQ0NRRHVyVWd0K3FVYzFUQU5CZ2txaGtpRzl3MEJBUXNGQURBVk1STXdFUVlEVlFRREV3cHIKZFdKbGNtNWxkR1Z6TUI0WERUSXdNRFl4TVRJeU1EZ3pObG9YRFRJeE1EWXhNVEl5TURnek5sb3dFVEVQTUEwRwpBMVVFQXd3R1kzVnlkR2x6TUlJQklqQU5CZ2txaGtpRzl3MEJBUUVGQUFPQ0FROEFNSUlCQ2dLQ0FRRUF3aXYxClVaWnNDUHBvTXZIVkdJRG5zWldOcUQvY2NIVDRpdndPSnpzQWNPZnYvTi9XVG9pd3pJSXRuemFyVWZSRkRYWnUKbHZJbVpqOE4zTEE1cWtEQklIMWNzeG96VHJKNmZmaHdHOUgyaEhJK3crS05ic2pEMTRWMWpETlNubk5wQU5OWAo5UkNTWW1iSXlHOC9XY2RrNmRHZktsVXEyNnNLTzRlOHduYVFCRGFwcGI0b2w2QVF1djhvdEo3YkY4YlBhMjRPCm5IM09nTXozcDVGL0JjbjBIMVFRMTFnS0pqaEtqcWo4Ry9TT29hdnZXRlVXZUdxaTE3cWJCYjVQS3B2dVVHK1oKaHd3S215TCtDVmUyZEJhYXlrWTBwNmpSNU1GR2VBRVg3RkVYRUdYUHJrK1FjY20wdDhEYmJwUWlZL09PK0Y5MApGYTZ6M2JuTDVWZUlpOGdZZFFJREFRQUJNQTBHQ1NxR1NJYjNEUUVCQ3dVQUE0SUJBUUE1V2tock0yMHQ2a21wCnpySmptQTVPQTlqQVc5UnlaSG84elgycGE1dTl6WmJpQnI3RmQweTJ1eU1JWkI5V2tTT3R2Vy9FaDFrQlArNTIKRUhnVnFOa09oY2pTWm53WmVDZTZrZE5HUFpDbVN3T0NPbzRUaU0wTTRsNFg3dWg1eE1PaytzUDR2WXg3MEdkUQpnbjBVZmdFdFhsTEF4MHlTYkJ1aU5CeTl2NmlkMFFMMXg2azVrcEp5TWx1M3RmVmFQTk15Vzl6RENqWERXYXRECnJoaUhDKzVtUENlRWQrZE5SUTlNNGI2T25JNERiMHpuUDBmVW9EOEs4SlplZkNueEFHZHlCWTA5ejR5SmFlekUKUWJrbE1ObUdOWE5FMklBclkyUm1hQ3V2UE5OblhHK09yRzBTK3ZvblltMVdzY1VTSWtvc1QvU1VxQmoxUFVYMgoyanl0VzhFeQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==
+        client-key-data: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBd2l2MVVaWnNDUHBvTXZIVkdJRG5zWldOcUQvY2NIVDRpdndPSnpzQWNPZnYvTi9XClRvaXd6SUl0bnphclVmUkZEWFp1bHZJbVpqOE4zTEE1cWtEQklIMWNzeG96VHJKNmZmaHdHOUgyaEhJK3crS04KYnNqRDE0VjFqRE5Tbm5OcEFOTlg5UkNTWW1iSXlHOC9XY2RrNmRHZktsVXEyNnNLTzRlOHduYVFCRGFwcGI0bwpsNkFRdXY4b3RKN2JGOGJQYTI0T25IM09nTXozcDVGL0JjbjBIMVFRMTFnS0pqaEtqcWo4Ry9TT29hdnZXRlVXCmVHcWkxN3FiQmI1UEtwdnVVRytaaHd3S215TCtDVmUyZEJhYXlrWTBwNmpSNU1GR2VBRVg3RkVYRUdYUHJrK1EKY2NtMHQ4RGJicFFpWS9PTytGOTBGYTZ6M2JuTDVWZUlpOGdZZFFJREFRQUJBb0lCQUdWQXhRRlJubTZrSGJnTApNYU5BZlJHMnVoTDFrajgyVC9FeDlUTng2ZzMyZE1mNTlXZ29rWUZqbE9URWZsd1RNL3NNT2lrT2h3V2tkZGNTCk1rL2N5cGpscG5SakFrUlVmOW0ydHNkYkd1RUFMa2k1bUNVZ0hqZ0NDVVVkOGtSY1RISTR3MUl3M1JUaElteWEKem45RG9oVG4wY2NpZUdIcWRFQ016TnJmTnNScTBFdE9uL3JLaVdINTFPczJ2Zkt2eWI3Y2FMOGo0T3ZPMDJ4VApPTTg3dXBPMFZKZ3JBYmlmVFhQZEV0d3Q3VDloajZLMFJiN2l5bW5CbFZaVWtXb3lMZS8zc3AxZFpST2RjdmpPCm84amp0N3o1WTYvN3J2WEUxdENUaDdINEtIN0tXRnV3b2tEajBWcE9IaGlIWTI2YmkxMVRub1J0Y1BOZXFEK20KRzFPSm9zRUNnWUVBNGJVcUhoTy9rbzdxSmlzVk5Ib2dLRnFKQXFPSzlxcWYvZTZBblMzNWxFYnloQ3U1aTBkZApyQzVZK29JTXJoRExEaGk5NmJyd1lIcitBalhoNE9pV3pXT1RMQXhQc1RKS2lQNEN3dkQ4eVZVdWNEMkR0MFN6CkhRR2lYaEFZZVNBOWRWbUNBbHdzTmZ1MzhKdGxEd3A3WWpTZlZia0xhc0ErZm9UaFJtUjY5OUVDZ1lFQTNEdEoKQXJFSy9MZ0lPVXVKMWo4NUplVjBQckpJWGFJV0R5a2Q2R1RraUtFMFFBTkI5RktLNW9FaUxlU0o3SGR5eTB4WApOUHlFUC9JenArZ2NFeTJueXFNUVdaTmxROGFnaW9MWjhtb2JpenVoS05sbllpNlYyTkg1SGpZa2VtRWc0RGo1CmQ0SzBPbDFURFNEU3J3UlozQTA0ak4zYS9CcGtENXpHa1d5bTQyVUNnWUVBdWsvamJtUjYxSzNvRm8ybHVXVysKT2RGU0c3MklMa2wyUEJTdVVoRHJYanlhWUFQLzZ6cUQxbWVEeDNXbXBlRHkzTFlMdm00emtsQzBjSHF0OUF2Swp2OHdjWmxYYlNyZnEwdDVxeFNSTVpwMUw4aGExTFlrbUdTR0tOLzh0Vkg4S2ZGM2dkYlpFUUdPQzJMaE5XWGNiCmxsczkwM01tTzM1cGwrSjBXcmtDMEtFQ2dZQWxJUldoRDRvanF6OHZzYTJPWW1CWEpFVWg0TnJVZG1RenNDSHIKc1Q3YVRodEtBNEtXRjJoMWppWGVDTjY3OERONVZPaUs5VnV5a0RublAvbWp2aG5BenhjTmt3MEtqUzA1ek8vRApyK0h1Nm1HMFNscmtzYWZ2d3c2MTZqamlMUWZtNVpRaGN2YkJ0RVF4UFd4bnQxc1MvMk9lVkRUOE5kTFMwd0tqCk4rYzNCUUtCZ1FESGNCYklnQlI0dERQNnM4N0ZYWktMRkJ5MDhpQk1JRGJDOEJtNks0YTdRQTVubGk2YVFzK0kKWWNndzZzZStxZGpvVk5TNzcyZVJGV1lyZ1FnNFYwanhkemxLa2JCL21PQWN4cWpjZnVXQzdxdHBTZnkvY2czQQpTdk0ySlFjM3cyS1Q1eDFwdnM1RFcrNC9xRzhKSHNFZFZMU0hacWU2SklTSTZDcWl4M21aeFE9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+    - name: kubernetes-admin
+    user:
+        client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM4akNDQWRxZ0F3SUJBZ0lJSHBzeTFDUEF0WXN3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB4T1RBNU1Ea3dOREF6TlRGYUZ3MHlNREE1TURnd05EQXpOVFZhTURReApGekFWQmdOVkJBb1REbk41YzNSbGJUcHRZWE4wWlhKek1Sa3dGd1lEVlFRREV4QnJkV0psY201bGRHVnpMV0ZrCmJXbHVNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQTA3U3JDUEhCSkhHMnRLeDcKRDAvWnBZYXA2eXJLVGNoS3hRRVlWSzlhdTZ2Q2d4UUdPak1XaDVPbXJhZXJxSkNudWkraFpPbm01NWYxSlJ2NQo0VWo0WEV5U3hJMS9od3VJR0FiV1lneTRRMmZyayt1RXJuRlFncWYvRzNEUzhqdU9JWXJsNEQzUTZJV05SVjVPCmUyMGdLMEtlWHZlZXVtRVlYUDVVK0RNcGZrVnhCc0RxLzFSb1pLYjNVYVl3RHJ1OHJJVDM1UXNWRkNpcC9aZTcKY29zSDRBaUJ1NGtoL1h4QXJwNzNkVnhVbzgwNjNuaHhINWRGcGpySDU4Ly9VcXE0dTE5UGZUeEVlOU5jeitHZwowT1Z0Vjc5RUdweWRzalNrbjRUUnNyaUlvbXNtc2xidlpVeVVTbW4vSTBrVDIxNmt3QVQzbThBOVYrM0lmQjdOCkdScFV1d0lEQVFBQm95Y3dKVEFPQmdOVkhROEJBZjhFQkFNQ0JhQXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUgKQXdJd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFDQmhLWkxjdFRrTEM2NGJXZnR6TlNXd1NDUDBxblF1MVQxZAp5MjhxSERpbWNoajR6K1kzVWIwYlRnT0xCYnNIcldkTVRXME1VS3l4MWc5S1I2b0M4Ukk4eEY5Q3d0YkFOMitFCnNmTytWaVJEbndod0toY2JJUzN3cG1jSW1DYWlOOHp2UWR4VXhhbnVyYkhnUmwvVW1Qd1U1eS8xbFRlTU83MWwKbG1iOEwwY2gvRUh2VytiUlBmVzluZHNlc1lyT3VlbExFYTBqcDAzNmhpQkFZZXQ0SE5lQVlHNm9NV3FBeHBmOApCQVNsNlNRZHViVE1wQWdjamZFMk96VDlXajhsYWpoZ05WMzhqN0c4TDZMSzIvUm9FajJFS0d3Qml0NWVYN3VOClN5OEZVcWVrdFVERGhSNkJ0ZmtBZkQxUDdRU1Z4NndXOTY3RHRlSy8xNmg0WkhJMVZDVT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        client-key-data: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBMDdTckNQSEJKSEcydEt4N0QwL1pwWWFwNnlyS1RjaEt4UUVZVks5YXU2dkNneFFHCk9qTVdoNU9tcmFlcnFKQ251aStoWk9ubTU1ZjFKUnY1NFVqNFhFeVN4STEvaHd1SUdBYldZZ3k0UTJmcmsrdUUKcm5GUWdxZi9HM0RTOGp1T0lZcmw0RDNRNklXTlJWNU9lMjBnSzBLZVh2ZWV1bUVZWFA1VStETXBma1Z4QnNEcQovMVJvWktiM1VhWXdEcnU4cklUMzVRc1ZGQ2lwL1plN2Nvc0g0QWlCdTRraC9YeEFycDczZFZ4VW84MDYzbmh4Ckg1ZEZwanJINTgvL1VxcTR1MTlQZlR4RWU5TmN6K0dnME9WdFY3OUVHcHlkc2pTa240VFJzcmlJb21zbXNsYnYKWlV5VVNtbi9JMGtUMjE2a3dBVDNtOEE5ViszSWZCN05HUnBVdXdJREFRQUJBb0lCQVFDMURuR3NMNTNnUGtSawpscEtVVU5VeUJFNXo2bCtrVUNUcUFYcStpazNON1NKb21ncU5ZYjNsNjNnRVVqNno1aXNjUjduL0pTK3VaNzVuCm8xcDh1cngxcTZObDZDSGw3QTNUaHAxNHM2b3ZNOFE4K0pLNzRmdGFFclZSMFpjSFJiblRwQWZmVk43Q3pkMDUKTTJOcG1iV0dhZTRxQ0JvL0NlVWRPd0tPVnFzbzZrbXBhTCtaTk8vWXROVXRhSnhRTmMrRnZ2emRtQWVmUjR3QgoyNWxFT3M5c2U1S013K0ZWb09tTkszaDhFTndUKzJXYjI3eEpnV09VamVKOVFmRXFaQ3ovOHFzOWVIL1FEUy9RCmtsUkYzbitwWWw0bmdURk9wUDVFT1IzNERUSlU2ZnFoOElaMnJTZERoRGx6SldmNTlYd09nQ0hxemtackVwY0QKeUFDcllSOVpBb0dCQVBoeER0Y2wyT25jNkFjWmxoMStCUWdJT2ltVy82RUJYaGlRUnJQRE95dDhZU2N3c1dJbwprcDh0b2QzRGNuTkw5SnJncXR2L05oWTZnemV4Z2kyenFldTM1WFRWSWxPZjJEdEd2UnhBRytGdHJCbXJhcWFVCkN3SDJnQjNva0k3M3dwOWwxemxIRWVJQzAyOGlHV00xR0F6dEdQbmsza2dzOVZZdkpoTTFsMW4xQW9HQkFOb2wKZjlUSVcwMkJURkNLWEJnWTVuYkRwQWNpZjlOMmVySXlUWExXYWRRTmFDd1lOMjZZKzNLV09pVkxOcHVlRVh0egpaMXFGU2hVd3RWRGlUNzZPSEhmeS9BakNlWkZoRWtaWWd6WG1XSERYL2dWSnUwU0toZ29kdTVjdHNyRGtxdmczCkdyTm5jNWZhbnVUSGI3TzR3enFrMEJCYXR5N0M5eWgzYUZNZjAxWHZBb0dBWFZQRE9ta2FTZ2ZWRmMyenlaSnMKZTI3endtblp6M2EvRFVVdGVodnQzMUVUQWZEVndjVHlCMS9SL1llTk4raWhrNGl3Um9KaHBBb0kvdVBzdmhSTwowYUM4VHA0K0RlSHZEWjF1THUyYVM1MnlWOVkvOHlHTDNRbm5hTlRUY1JGN2gvdHUxVEp3Y2xHVGNaMENvblR3CmV2S2FQazJPZnRoOHRRcHpLQ1lxbS8wQ2dZQjY3YlRLY0psYTVLamZuZ2hsbitxSE5KcERWd0tYWkdXaDgwekgKa09JVUYvWURHeVpwa1pYb3JaVlluTGpLR3RvWktpQXMxMzIyMFRycnVJeGRnbkd5ZWwvaWc4ekR5dUxrZDA2QgpXaXV1YzFqM0crU0dyRlQ2Y0dUY3ZXaTczREFvTGMxREdlSCt5YmpPalVCNkUzMFlsL1dUc2JzV2c5R0pvVGhOCjExcGRTd0tCZ0hjMkdDMFFHcFRwS2I2akJxT2xibTJwY0c0YTc5SDg2SUl6UWdnSk1vY0JDWXlRZXhMWkk3ZGkKQ1BYa2JjZU1XYmtZeHErR0laVFdNL3IrK0U3R0hvMitIak4ybnZ3T1EzSXJHQ2xlelBlRnZMeDJtNUM2bjFNbgpZaWdzYS9mYmVSYzlSZis5RXNId21Wam8xL284b3gzWE4xWGZ5ZnBFZlBvRVlVTW1lNTRxCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+
+9.  Review kubeconfig:
+
+    C:\Users\Administrator.DEMO>kubectl config view
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: DATA+OMITTED
+        server: https://192.168.0.63:6443
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        namespace: default
+        user: curtis
+    name: curtis@kubernetes
+    - context:
+        cluster: kubernetes
+        namespace: kube-system
+        user: kubernetes-admin
+    name: kubernetes-admin@kubernetes
+    current-context: kubernetes-admin@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: curtis
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+    - name: kubernetes-admin
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+
+10. Set new context and verify: 
+
+    C:\Users\Administrator.DEMO>kubectl config use-context curtis@kubernetes
+    Switched to context "curtis@kubernetes".
+
+    C:\Users\Administrator.DEMO>kubectl config view
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: DATA+OMITTED
+        server: https://192.168.0.63:6443
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        namespace: default
+        user: curtis
+    name: curtis@kubernetes
+    - context:
+        cluster: kubernetes
+        namespace: kube-system
+        user: kubernetes-admin
+    name: kubernetes-admin@kubernetes
+    current-context: curtis@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: curtis
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+    - name: kubernetes-admin
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+
+    C:\Users\Administrator.DEMO>
+
+11.  Switch back to Kubernetes-admin:
+
+    C:\Users\Administrator.DEMO>kubectl config use-context kubernetes-admin@kubernetes
+    Switched to context "kubernetes-admin@kubernetes".
+
+12.  Create a role and rolebinding
+
+    apiVersion: rbac.authorization.k8s.io/v1 
+    kind: Role 
+    metadata: 
+    namespace: default  
+    name: role1 
+    rules: 
+    - apiGroups: ['*']     
+        resources: ['pods', 'pods/log']    
+        verbs: ['get', 'list'] 
+
+    apiVersion: rbac.authorization.k8s.io/v1 
+    kind: RoleBinding
+    metadata: 
+    namespace: default  
+    name: rolebinding1 
+    roleRef: 
+    apiGroup: rbac.authorization.k8s.io 
+    kind: Role 
+    name: role1
+    subjects:
+    - apiGroup: rbac.authorization.k8s.io    
+    kind: User 
+    name: curtis
+
+12. Switch to new user
+
+13. Test functionality: 
+
+    C:\Users\Administrator.DEMO>kubectl get pods
+    NAME                                           READY   STATUS    RESTARTS   AGE
+    example-visitorapp-backend-84975ccd8-pvpnr     1/1     Running   0          6h38m
+    example-visitorapp-frontend-75d6d7c674-gqspl   1/1     Running   0          6h42m
+    example-visitorapp-mysql-6cb4597976-t47ps      1/1     Running   0          6h42m
+    visitorapp-operator-797668d94b-rghk8           1/1     Running   0          6h44m
+
+    C:\Users\Administrator.DEMO>kubectl logs example-visitorapp-backend-84975ccd8-pvpnr
+    Migrating Database...
+    Configuring MySQL:
+        Database: visitors
+        Username: visitors-user
+        Host: example-visitorapp-mysql-service
+        Port: 3306
+    Operations to perform:
+        Apply all migrations: admin, auth, contenttypes, service, sessions
+    Running migrations:
+        No migrations to apply.
+    Migration Complete
+    Watching for file changes with StatReloader
+    [11/Jun/2020 16:04:46] "GET /visitors/ HTTP/1.1" 200 101
+    [11/Jun/2020 16:04:46] "GET /visitors/ HTTP/1.1" 200 101
+    [11/Jun/2020 16:04:47] "GET /visitors/ HTTP/1.1" 200 101
+    [11/Jun/2020 16:04:47] "GET /visitors/ HTTP/1.1" 200 101
+    [11/Jun/2020 16:04:48] "GET /visitors/ HTTP/1.1" 200 101
+    ...
+
+14. An alternative to steps 5 above is to use... get the base64 for the csr:  
+
+    [root@rhel3 pki]# cat curtis.csr | base64 | tr -d '\n'
+
+15. Add this base64 csr into a csr yaml and execute with Kubernetes-admin :
+
+    apiVersion: certificates.k8s.io/v1beta1
+    kind: CertificateSigningRequest
+    metadata:
+    name: curtiscsr
+    spec:
+    groups:
+    - system:authenticated
+    request: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURSBSRVFVRVNULS0tLS0KTUlJQ1ZqQ0NBVDRDQVFBd0VURVBNQTBHQTFVRUF3d0dZM1Z5ZEdsek1JSUJJakFOQmdrcWhraUc5dzBCQVFFRgpBQU9DQVE4QU1JSUJDZ0tDQVFFQXdpdjFVWlpzQ1Bwb012SFZHSURuc1pXTnFEL2NjSFQ0aXZ3T0p6c0FjT2Z2Ci9OL1dUb2l3eklJdG56YXJVZlJGRFhadWx2SW1aajhOM0xBNXFrREJJSDFjc3hvelRySjZmZmh3RzlIMmhISSsKdytLTmJzakQxNFYxakROU25uTnBBTk5YOVJDU1ltYkl5RzgvV2NkazZkR2ZLbFVxMjZzS080ZTh3bmFRQkRhcApwYjRvbDZBUXV2OG90SjdiRjhiUGEyNE9uSDNPZ016M3A1Ri9CY24wSDFRUTExZ0tKamhLanFqOEcvU09vYXZ2CldGVVdlR3FpMTdxYkJiNVBLcHZ1VUcrWmh3d0tteUwrQ1ZlMmRCYWF5a1kwcDZqUjVNRkdlQUVYN0ZFWEVHWFAKcmsrUWNjbTB0OERiYnBRaVkvT08rRjkwRmE2ejNibkw1VmVJaThnWWRRSURBUUFCb0FBd0RRWUpLb1pJaHZjTgpBUUVMQlFBRGdnRUJBR1g2Y1U2am9XdWtCK0R4YzR0RzNnZmFaL0xNalBBUGNsbFFuTStjby9yUjZEUkVwSnpFCmZ2NkFDNTIzZ1hSOHM1VEhaa3VVNUd0d1JWQm4rajNkem9zcHhqYzFDOW9qVU5jOVY3eXpXUE5nMzRaangxSVYKQXJlbW5HYUFTcStQMlNjNi8wdEZyRGltWVVNMHZ1b0xIVXNHV0hQSFJkVUtQcXMvTHhBZjRiczBGb3cxcFVHZQpadDFnb09NV1NUSmpyWGRWOU1uTkc3cGVyeDZGYzNXWmpYdHQrMURINm9YV1NJNE9tTTRIQStINHlzWDZLeXlqCklPMlMxbVFZT2lyWE9GSTB1bDZ5TjcrQTFBNGkwdlFTMTE3bnYxQ2VaV2ZvRWRqaWxZaHN1RVUwOHhDQ3FxYnMKelV1RlFXQ2NNdkJXZmVINndSQ0w3c2RDK1V2WG1ZOUxpNFU9Ci0tLS0tRU5EIENFUlRJRklDQVRFIFJFUVVFU1QtLS0tLQo=
+    usages:
+    - digital signature
+    - key encipherment
+    - server auth
+    - client auth
+
+16.  Verify the pending csr:
+
+    [root@rhel3 pki]# kubectl get csr
+    NAME        AGE   REQUESTOR          CONDITION
+    curtiscsr   43s   kubernetes-admin   Pending
+
+
+17.  Approve the csr and verify:
+
+    [root@rhel3 pki]# kubectl certificate approve curtiscsr
+    certificatesigningrequest.certificates.k8s.io/curtiscsr approved
+    
+    [root@rhel3 pki]# kubectl get csr
+    NAME        AGE     REQUESTOR          CONDITION
+    curtiscsr   2m36s   kubernetes-admin   Approved,Issued
+
+18.  To get the certificate, use:  
+
+    [root@rhel3 pki]# kubectl get csr curtiscsr -o jsonpath='{.status.certificate}' | base64 --decode > curtis.crt
+
+19. To get the base64 version of the certificate, use:  
+
+    [root@rhel3 pki]# kubectl get csr curtiscsr -o jsonpath='{.status.certificate}' > curtis.crt.base64
+
+20.  To add them to the kubeconfig using kubectl config commands:  
+
+    [root@rhel3 pki]# kubectl config view
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: DATA+OMITTED
+        server: https://192.168.0.63:6443
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        user: kubernetes-admin
+    name: kubernetes-admin@kubernetes
+    current-context: kubernetes-admin@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: kubernetes-admin
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+    
+    [root@rhel3 pki]# pwd
+    /etc/kubernetes/pki
+    
+    [root@rhel3 pki]# kubectl config set-credentials curtis --client-certificate=/etc/kubernetes/pki/curtis.crt --client-key=/etc/kubernetes/pki/curtis.key --embed-certs=true
+    User "curtis" set.
+    
+    [root@rhel3 pki]# kubectl config set-context curtis@kubernetes --cluster kubernetes --user=curtis
+    Context "curtis@kubernetes" created.
+    
+    [root@rhel3 pki]# kubectl config view
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: DATA+OMITTED
+        server: https://192.168.0.63:6443
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        user: curtis
+    name: curtis@kubernetes
+    - context:
+        cluster: kubernetes
+        user: kubernetes-admin
+    name: kubernetes-admin@kubernetes
+    current-context: kubernetes-admin@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: curtis
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+    - name: kubernetes-admin
+    user:
+        client-certificate-data: REDACTED
+        client-key-data: REDACTED
+    [root@rhel3 pki]#
+
+    [root@rhel3 .kube]# cat config
+    apiVersion: v1
+    clusters:
+    - cluster:
+        certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUN5RENDQWJDZ0F3SUJBZ0lCQURBTkJna3Foa2lHOXcwQkFRc0ZBREFWTVJNd0VRWURWUVFERXdwcmRXSmwKY201bGRHVnpNQjRYRFRFNU1Ea3dPVEEwTURNMU1Wb1hEVEk1TURrd05qQTBNRE0xTVZvd0ZURVRNQkVHQTFVRQpBeE1LYTNWaVpYSnVaWFJsY3pDQ0FTSXdEUVlKS29aSWh2Y05BUUVCQlFBRGdnRVBBRENDQVFvQ2dnRUJBT0oyCi9kaWhMWnA3WnM1YkEwQllacEw1WnpmV0tRenBMU0pUUEtIRVBiNzl0ZmVlZ0Z6MDRObzBEOWtvYzFHM2xNVmgKbjNxSW1qdS8xN3M2OTBQMFpCVUNiR2h4VGkrWUphT0w2T0tuVmZsWWRSSHJTYkttSldDU0V0NEpnYWNOV3h1NQo0N3JkQ1prUVdUN0pSTWovZkZ2Snhxc0ZuRUlsR2xOQ3R2OW83Y2MrQVBxaFN5NWNKb0JhejVxRUhaZTJYZktuClR0UXRlM210WWYyQUVWSEhCMkxUdHpZUWlyNkJyenZDc3NVMkZCZkU0SHU2cExNdFlVem9jZ2FZRGI4MzN3eFMKMXE4NDh3a0N2ZmlLUTFJWHpaUGRkYTd4MW10ZjI4dkFQOGh5ZitTdFlzWDlDTi92dkIwK2pSWGxCcFRVTm1XVQoyV0ZJb0c4Y2IrOW1ML0NqNmZNQ0F3RUFBYU1qTUNFd0RnWURWUjBQQVFIL0JBUURBZ0trTUE4R0ExVWRFd0VCCi93UUZNQU1CQWY4d0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFNMjdmYXJ1TEIxMFg4aXdsQVpNY0laUGcvcjAKS1VQQkhuNUorczNiZndYZXJickllS1FKYjFNUmFQOEFJMlR3d1c2V2gvNmw3YTRWVTB0cjg0Rmx5Y3RoVVhjSgpGN1dVS2hwMjhsOTBMY3JmWm4rQWo1V2FUd1Q5dWM3NjJOeEFMcUxMdzBJY2huZXE5Q0F1QTRlbnpUbjFENzRqClJOcmttVk9uS0R5U0FLRjlOVHVHc2F6SndFdTFoeDFTT3NqNkxrQ21Gcm9QN0ZKdWpONzI1YXk2UE9wTStpQUEKamVhdzFKVkRUem5sQTd3MlJvQkpoK1ZXT2xRUmtoVTdjaFBhZEJ2L3YzeVVrem9UaE9Fb29PWmhuRVhmWjA2bApWZG9VbGRPbVZndUpISFlGMkMyRC9adThBM1JNaFJYcU96L3FDays4UjZaQWR2YUZKYWMwbndZS3lHST0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        server: https://192.168.0.63:6443
+    name: kubernetes
+    contexts:
+    - context:
+        cluster: kubernetes
+        user: curtis
+    name: curtis@kubernetes
+    - context:
+        cluster: kubernetes
+        user: kubernetes-admin
+    name: kubernetes-admin@kubernetes
+    current-context: kubernetes-admin@kubernetes
+    kind: Config
+    preferences: {}
+    users:
+    - name: curtis
+    user:
+        client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURFakNDQWZxZ0F3SUJBZ0lVTlJlandpTUpHeVU2ZjFQK1U5YXUvNmF0cUZFd0RRWUpLb1pJaHZjTkFRRUwKQlFBd0ZURVRNQkVHQTFVRUF4TUthM1ZpWlhKdVpYUmxjekFlRncweU1EQTJNVEl4TkRVME1EQmFGdzB5TVRBMgpNVEl4TkRVME1EQmFNQkV4RHpBTkJnTlZCQU1UQm1OMWNuUnBjekNDQVNJd0RRWUpLb1pJaHZjTkFRRUJCUUFECmdnRVBBRENDQVFvQ2dnRUJBTUlyOVZHV2JBajZhREx4MVJpQTU3R1ZqYWcvM0hCMCtJcjhEaWM3QUhEbjcvemYKMWs2SXNNeUNMWjgycTFIMFJRMTJicGJ5Sm1ZL0RkeXdPYXBBd1NCOVhMTWFNMDZ5ZW4zNGNCdlI5b1J5UHNQaQpqVzdJdzllRmRZd3pVcDV6YVFEVFYvVVFrbUpteU1odlAxbkhaT25SbnlwVkt0dXJDanVIdk1KMmtBUTJxYVcrCktKZWdFTHIvS0xTZTJ4Zkd6MnR1RHB4OXpvRE05NmVSZndYSjlCOVVFTmRZQ2lZNFNvNm8vQnYwanFHcjcxaFYKRm5ocW90ZTZtd1crVHlxYjdsQnZtWWNNQ3BzaS9nbFh0blFXbXNwR05LZW8wZVRCUm5nQkYreFJGeEJsejY1UAprSEhKdExmQTIyNlVJbVB6anZoZmRCV3VzOTI1eStWWGlJdklHSFVDQXdFQUFhTmVNRnd3RGdZRFZSMFBBUUgvCkJBUURBZ1dnTUIwR0ExVWRKUVFXTUJRR0NDc0dBUVVGQndNQkJnZ3JCZ0VGQlFjREFqQU1CZ05WSFJNQkFmOEUKQWpBQU1CMEdBMVVkRGdRV0JCUzJQVTBLbXNHZzQ4NVRzTjNQRkMwT1NFY2RlVEFOQmdrcWhraUc5dzBCQVFzRgpBQU9DQVFFQXZieHJuZzgyQTdEaEMwc09UaFpBNHF5Y3pxcmxzOWxhOXlxVlprM1VRTCtseDQ1dzV6bUtqMFgwCmgwUE1KWGRPS1F4WEQ5N09QZ0JTZ0c1eGozSENrUjU2KzRNek9PMy9tcDZwY2Fma3BhNG83UE4yUVhacjlNNm0KZFNGeWNJWDlBblEvUkdxM2xOdVE1N0ZLMlJJZkIyUjZnZWRCOXE5RjBIMTNvd2JKYUozM2dRV2pMTWVnbHdHSQo2dXBqRHVRQ2g1R01Kc0phbFJ4Z2QrZ3lTWUV6ZXJKNXNnTUpkb3lsQW1ZcXJTMzh1NmNNQTRhVU50Z1JnVzJRCk43WEE1SEFSeXQ0VWp1TFBTblJPRWlMSUxKTm5lZUNOR09MbktRZi9iTEZKRjZJZzdZNTV5aElLT1dUbkZTTUYKZGJlLzdPcHBGT1NPYkRqT254RmptOWIzREJHYS9nPT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        client-key-data: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFcEFJQkFBS0NBUUVBd2l2MVVaWnNDUHBvTXZIVkdJRG5zWldOcUQvY2NIVDRpdndPSnpzQWNPZnYvTi9XClRvaXd6SUl0bnphclVmUkZEWFp1bHZJbVpqOE4zTEE1cWtEQklIMWNzeG96VHJKNmZmaHdHOUgyaEhJK3crS04KYnNqRDE0VjFqRE5Tbm5OcEFOTlg5UkNTWW1iSXlHOC9XY2RrNmRHZktsVXEyNnNLTzRlOHduYVFCRGFwcGI0bwpsNkFRdXY4b3RKN2JGOGJQYTI0T25IM09nTXozcDVGL0JjbjBIMVFRMTFnS0pqaEtqcWo4Ry9TT29hdnZXRlVXCmVHcWkxN3FiQmI1UEtwdnVVRytaaHd3S215TCtDVmUyZEJhYXlrWTBwNmpSNU1GR2VBRVg3RkVYRUdYUHJrK1EKY2NtMHQ4RGJicFFpWS9PTytGOTBGYTZ6M2JuTDVWZUlpOGdZZFFJREFRQUJBb0lCQUdWQXhRRlJubTZrSGJnTApNYU5BZlJHMnVoTDFrajgyVC9FeDlUTng2ZzMyZE1mNTlXZ29rWUZqbE9URWZsd1RNL3NNT2lrT2h3V2tkZGNTCk1rL2N5cGpscG5SakFrUlVmOW0ydHNkYkd1RUFMa2k1bUNVZ0hqZ0NDVVVkOGtSY1RISTR3MUl3M1JUaElteWEKem45RG9oVG4wY2NpZUdIcWRFQ016TnJmTnNScTBFdE9uL3JLaVdINTFPczJ2Zkt2eWI3Y2FMOGo0T3ZPMDJ4VApPTTg3dXBPMFZKZ3JBYmlmVFhQZEV0d3Q3VDloajZLMFJiN2l5bW5CbFZaVWtXb3lMZS8zc3AxZFpST2RjdmpPCm84amp0N3o1WTYvN3J2WEUxdENUaDdINEtIN0tXRnV3b2tEajBWcE9IaGlIWTI2YmkxMVRub1J0Y1BOZXFEK20KRzFPSm9zRUNnWUVBNGJVcUhoTy9rbzdxSmlzVk5Ib2dLRnFKQXFPSzlxcWYvZTZBblMzNWxFYnloQ3U1aTBkZApyQzVZK29JTXJoRExEaGk5NmJyd1lIcitBalhoNE9pV3pXT1RMQXhQc1RKS2lQNEN3dkQ4eVZVdWNEMkR0MFN6CkhRR2lYaEFZZVNBOWRWbUNBbHdzTmZ1MzhKdGxEd3A3WWpTZlZia0xhc0ErZm9UaFJtUjY5OUVDZ1lFQTNEdEoKQXJFSy9MZ0lPVXVKMWo4NUplVjBQckpJWGFJV0R5a2Q2R1RraUtFMFFBTkI5RktLNW9FaUxlU0o3SGR5eTB4WApOUHlFUC9JenArZ2NFeTJueXFNUVdaTmxROGFnaW9MWjhtb2JpenVoS05sbllpNlYyTkg1SGpZa2VtRWc0RGo1CmQ0SzBPbDFURFNEU3J3UlozQTA0ak4zYS9CcGtENXpHa1d5bTQyVUNnWUVBdWsvamJtUjYxSzNvRm8ybHVXVysKT2RGU0c3MklMa2wyUEJTdVVoRHJYanlhWUFQLzZ6cUQxbWVEeDNXbXBlRHkzTFlMdm00emtsQzBjSHF0OUF2Swp2OHdjWmxYYlNyZnEwdDVxeFNSTVpwMUw4aGExTFlrbUdTR0tOLzh0Vkg4S2ZGM2dkYlpFUUdPQzJMaE5XWGNiCmxsczkwM01tTzM1cGwrSjBXcmtDMEtFQ2dZQWxJUldoRDRvanF6OHZzYTJPWW1CWEpFVWg0TnJVZG1RenNDSHIKc1Q3YVRodEtBNEtXRjJoMWppWGVDTjY3OERONVZPaUs5VnV5a0RublAvbWp2aG5BenhjTmt3MEtqUzA1ek8vRApyK0h1Nm1HMFNscmtzYWZ2d3c2MTZqamlMUWZtNVpRaGN2YkJ0RVF4UFd4bnQxc1MvMk9lVkRUOE5kTFMwd0tqCk4rYzNCUUtCZ1FESGNCYklnQlI0dERQNnM4N0ZYWktMRkJ5MDhpQk1JRGJDOEJtNks0YTdRQTVubGk2YVFzK0kKWWNndzZzZStxZGpvVk5TNzcyZVJGV1lyZ1FnNFYwanhkemxLa2JCL21PQWN4cWpjZnVXQzdxdHBTZnkvY2czQQpTdk0ySlFjM3cyS1Q1eDFwdnM1RFcrNC9xRzhKSHNFZFZMU0hacWU2SklTSTZDcWl4M21aeFE9PQotLS0tLUVORCBSU0EgUFJJVkFURSBLRVktLS0tLQo=
+    - name: kubernetes-admin
+    user:
+        client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUM4akNDQWRxZ0F3SUJBZ0lJSHBzeTFDUEF0WXN3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB4T1RBNU1Ea3dOREF6TlRGYUZ3MHlNREE1TURnd05EQXpOVFZhTURReApGekFWQmdOVkJBb1REbk41YzNSbGJUcHRZWE4wWlhKek1Sa3dGd1lEVlFRREV4QnJkV0psY201bGRHVnpMV0ZrCmJXbHVNSUlCSWpBTkJna3Foa2lHOXcwQkFRRUZBQU9DQVE4QU1JSUJDZ0tDQVFFQTA3U3JDUEhCSkhHMnRLeDcKRDAvWnBZYXA2eXJLVGNoS3hRRVlWSzlhdTZ2Q2d4UUdPak1XaDVPbXJhZXJxSkNudWkraFpPbm01NWYxSlJ2NQo0VWo0WEV5U3hJMS9od3VJR0FiV1lneTRRMmZyayt1RXJuRlFncWYvRzNEUzhqdU9JWXJsNEQzUTZJV05SVjVPCmUyMGdLMEtlWHZlZXVtRVlYUDVVK0RNcGZrVnhCc0RxLzFSb1pLYjNVYVl3RHJ1OHJJVDM1UXNWRkNpcC9aZTcKY29zSDRBaUJ1NGtoL1h4QXJwNzNkVnhVbzgwNjNuaHhINWRGcGpySDU4Ly9VcXE0dTE5UGZUeEVlOU5jeitHZwowT1Z0Vjc5RUdweWRzalNrbjRUUnNyaUlvbXNtc2xidlpVeVVTbW4vSTBrVDIxNmt3QVQzbThBOVYrM0lmQjdOCkdScFV1d0lEQVFBQm95Y3dKVEFPQmdOVkhROEJBZjhFQkFNQ0JhQXdFd1lEVlIwbEJBd3dDZ1lJS3dZQkJRVUgKQXdJd0RRWUpLb1pJaHZjTkFRRUxCUUFEZ2dFQkFDQmhLWkxjdFRrTEM2NGJXZnR6TlNXd1NDUDBxblF1MVQxZAp5MjhxSERpbWNoajR6K1kzVWIwYlRnT0xCYnNIcldkTVRXME1VS3l4MWc5S1I2b0M4Ukk4eEY5Q3d0YkFOMitFCnNmTytWaVJEbndod0toY2JJUzN3cG1jSW1DYWlOOHp2UWR4VXhhbnVyYkhnUmwvVW1Qd1U1eS8xbFRlTU83MWwKbG1iOEwwY2gvRUh2VytiUlBmVzluZHNlc1lyT3VlbExFYTBqcDAzNmhpQkFZZXQ0SE5lQVlHNm9NV3FBeHBmOApCQVNsNlNRZHViVE1wQWdjamZFMk96VDlXajhsYWpoZ05WMzhqN0c4TDZMSzIvUm9FajJFS0d3Qml0NWVYN3VOClN5OEZVcWVrdFVERGhSNkJ0ZmtBZkQxUDdRU1Z4NndXOTY3RHRlSy8xNmg0WkhJMVZDVT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+        client-key-data: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQpNSUlFb3dJQkFBS0NBUUVBMDdTckNQSEJKSEcydEt4N0QwL1pwWWFwNnlyS1RjaEt4UUVZVks5YXU2dkNneFFHCk9qTVdoNU9tcmFlcnFKQ251aStoWk9ubTU1ZjFKUnY1NFVqNFhFeVN4STEvaHd1SUdBYldZZ3k0UTJmcmsrdUUKcm5GUWdxZi9HM0RTOGp1T0lZcmw0RDNRNklXTlJWNU9lMjBnSzBLZVh2ZWV1bUVZWFA1VStETXBma1Z4QnNEcQovMVJvWktiM1VhWXdEcnU4cklUMzVRc1ZGQ2lwL1plN2Nvc0g0QWlCdTRraC9YeEFycDczZFZ4VW84MDYzbmh4Ckg1ZEZwanJINTgvL1VxcTR1MTlQZlR4RWU5TmN6K0dnME9WdFY3OUVHcHlkc2pTa240VFJzcmlJb21zbXNsYnYKWlV5VVNtbi9JMGtUMjE2a3dBVDNtOEE5ViszSWZCN05HUnBVdXdJREFRQUJBb0lCQVFDMURuR3NMNTNnUGtSawpscEtVVU5VeUJFNXo2bCtrVUNUcUFYcStpazNON1NKb21ncU5ZYjNsNjNnRVVqNno1aXNjUjduL0pTK3VaNzVuCm8xcDh1cngxcTZObDZDSGw3QTNUaHAxNHM2b3ZNOFE4K0pLNzRmdGFFclZSMFpjSFJiblRwQWZmVk43Q3pkMDUKTTJOcG1iV0dhZTRxQ0JvL0NlVWRPd0tPVnFzbzZrbXBhTCtaTk8vWXROVXRhSnhRTmMrRnZ2emRtQWVmUjR3QgoyNWxFT3M5c2U1S013K0ZWb09tTkszaDhFTndUKzJXYjI3eEpnV09VamVKOVFmRXFaQ3ovOHFzOWVIL1FEUy9RCmtsUkYzbitwWWw0bmdURk9wUDVFT1IzNERUSlU2ZnFoOElaMnJTZERoRGx6SldmNTlYd09nQ0hxemtackVwY0QKeUFDcllSOVpBb0dCQVBoeER0Y2wyT25jNkFjWmxoMStCUWdJT2ltVy82RUJYaGlRUnJQRE95dDhZU2N3c1dJbwprcDh0b2QzRGNuTkw5SnJncXR2L05oWTZnemV4Z2kyenFldTM1WFRWSWxPZjJEdEd2UnhBRytGdHJCbXJhcWFVCkN3SDJnQjNva0k3M3dwOWwxemxIRWVJQzAyOGlHV00xR0F6dEdQbmsza2dzOVZZdkpoTTFsMW4xQW9HQkFOb2wKZjlUSVcwMkJURkNLWEJnWTVuYkRwQWNpZjlOMmVySXlUWExXYWRRTmFDd1lOMjZZKzNLV09pVkxOcHVlRVh0egpaMXFGU2hVd3RWRGlUNzZPSEhmeS9BakNlWkZoRWtaWWd6WG1XSERYL2dWSnUwU0toZ29kdTVjdHNyRGtxdmczCkdyTm5jNWZhbnVUSGI3TzR3enFrMEJCYXR5N0M5eWgzYUZNZjAxWHZBb0dBWFZQRE9ta2FTZ2ZWRmMyenlaSnMKZTI3endtblp6M2EvRFVVdGVodnQzMUVUQWZEVndjVHlCMS9SL1llTk4raWhrNGl3Um9KaHBBb0kvdVBzdmhSTwowYUM4VHA0K0RlSHZEWjF1THUyYVM1MnlWOVkvOHlHTDNRbm5hTlRUY1JGN2gvdHUxVEp3Y2xHVGNaMENvblR3CmV2S2FQazJPZnRoOHRRcHpLQ1lxbS8wQ2dZQjY3YlRLY0psYTVLamZuZ2hsbitxSE5KcERWd0tYWkdXaDgwekgKa09JVUYvWURHeVpwa1pYb3JaVlluTGpLR3RvWktpQXMxMzIyMFRycnVJeGRnbkd5ZWwvaWc4ekR5dUxrZDA2QgpXaXV1YzFqM0crU0dyRlQ2Y0dUY3ZXaTczREFvTGMxREdlSCt5YmpPalVCNkUzMFlsL1dUc2JzV2c5R0pvVGhOCjExcGRTd0tCZ0hjMkdDMFFHcFRwS2I2akJxT2xibTJwY0c0YTc5SDg2SUl6UWdnSk1vY0JDWXlRZXhMWkk3ZGkKQ1BYa2JjZU1XYmtZeHErR0laVFdNL3IrK0U3R0hvMitIak4ybnZ3T1EzSXJHQ2xlelBlRnZMeDJtNUM2bjFNbgpZaWdzYS9mYmVSYzlSZis5RXNId21Wam8xL284b3gzWE4xWGZ5ZnBFZlBvRVlVTW1lNTRxCi0tLS0tRU5EIFJTQSBQUklWQVRFIEtFWS0tLS0tCg==
+
+21. Set the new context and verify that existing role/rolebindings are working:
+
+    [root@rhel3 .kube]# kubectl config use-context curtis@kubernetes
+    Switched to context "curtis@kubernetes".
+
+    [root@rhel3 .kube]# kubectl get pods
+    NAME                                           READY   STATUS    RESTARTS   AGE
+    example-visitorapp-backend-84975ccd8-pvpnr     1/1     Running   0          23h
+    example-visitorapp-frontend-75d6d7c674-gqspl   1/1     Running   0          23h
+    example-visitorapp-mysql-6cb4597976-t47ps      1/1     Running   0          23h
+    visitorapp-operator-797668d94b-rghk8           1/1     Running   0          23h

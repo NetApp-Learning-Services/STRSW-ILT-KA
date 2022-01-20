@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: stress-3
+spec:
+  containers:
+  - name: cpu-demo-ctr
+    image: vish/stress
+    resources:
+      requests:
+        cpu: "0.5"
+      limits:
+        cpu: "0.5"
+    args:
+    - -cpus
+    - "1"

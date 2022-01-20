@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: multi
+  namespace: default
+  labels:
+    app: webapp
+spec:
+  volumes:  
+  - name: html    
+    emptyDir: {}
+  containers:
+  - name: frontend
+    image: nginx
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: html
+      mountPath: /usr/share/nginx/html
+  - name: backend
+    image: debian
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "250m"
+      limits:
+        memory: "128Mi"
+        cpu: "500m"
+    volumeMounts:
+    - name: html
+      mountPath: /html
+    command: ["/bin/sh", "-c"]
+    args:
+      - while true; 
+          do date >> /html/index.html;
+          sleep 1;
+        done;

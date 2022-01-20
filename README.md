@@ -1,2 +1,2 @@
 # STRSW-ILT-KA
-Kubernetes Administration with Kubernetes 1.23 
+Kubernetes Administration with Kubernetes v1.23 
