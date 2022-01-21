@@ -8,7 +8,7 @@ spec:
     - sleep
     - "2000"
     image: busybox
-    name: masterSchedRun
+    name: controlSchedRun
     resources:
       requests:
         memory: "64Mi"
