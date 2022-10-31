@@ -15,6 +15,7 @@ spec:
       containers:
       - name: sise
         image: mhausenblas/simpleservice:0.5.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 9876
 ---
@@ -37,11 +38,11 @@ metadata:
 spec:
   containers:
   - image: alpine:3.2
+    imagePullPolicy: IfNotPresent
     command:
       - /bin/sh
       - "-c"
       - "sleep 60m"
-    imagePullPolicy: IfNotPresent
     name: alpine
     resources:
       requests:
