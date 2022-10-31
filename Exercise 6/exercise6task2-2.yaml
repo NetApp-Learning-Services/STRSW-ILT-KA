@@ -13,7 +13,8 @@ spec:
     - 500M
     - --vm-hang
     - "1"
-    image: polinux/stress
+    image: polinux/stress:1.0.4
+    imagePullPolicy: IfNotPresent
     resources:
         limits:
           memory: 800Mi
@@ -22,7 +23,6 @@ spec:
           memory: 500Mi
     command:
       - stress
-    imagePullPolicy: IfNotPresent
     name: mem-stress
 ---
 apiVersion: v1
@@ -35,7 +35,8 @@ spec:
   - args:
     - -cpus
     - "1"
-    image: vish/stress
+    image: vish/stress:latest
+    imagePullPolicy: IfNotPresent
     resources:
         limits:
           cpu: "1"
