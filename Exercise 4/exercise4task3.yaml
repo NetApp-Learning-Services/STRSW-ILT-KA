@@ -16,6 +16,7 @@ spec:
         nodeType: edge
       containers:
       - name: nginx
-        image: nginx:stable-alpine
+        image: nginx:1.14.2
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
