@@ -5,7 +5,8 @@ metadata:
 spec:
   containers:
   - name: app
-    image: httpd
+    image: httpd:2.4.54
+    imagePullPolicy: IfNotPresent
     ports:
     - containerPort: 80
     resources:

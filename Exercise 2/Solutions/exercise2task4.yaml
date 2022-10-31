@@ -11,7 +11,8 @@ spec:
     emptyDir: {}
   containers:
   - name: frontend
-    image: nginx
+    image: nginx:1.14.2
+    imagePullPolicy: IfNotPresent
     resources:
       requests:
         memory: "64Mi"
@@ -23,7 +24,8 @@ spec:
     - name: html
       mountPath: /usr/share/nginx/html
   - name: backend
-    image: debian
+    image: debian:10.10
+    imagePullPolicy: IfNotPresent
     resources:
       requests:
         memory: "64Mi"
