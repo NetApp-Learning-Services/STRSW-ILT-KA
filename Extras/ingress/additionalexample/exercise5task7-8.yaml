@@ -30,7 +30,8 @@ spec:
         app: pi-web
     spec:
       containers:
-        - image: kiamol/ch05-pi
+        - image: kiamol/ch05-pi:latest
+          imagePullPolicy: IfNotPresent
           command: ["dotnet", "Pi.Web.dll", "-m", "web"]
           name: pi-web
           ports:

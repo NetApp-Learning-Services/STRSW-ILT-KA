@@ -17,9 +17,9 @@ spec:
         - name: visitorapp-operator
           # Replace this with the built image name
           image: curtisab/visitorapp-operator:v0.0.2
+          imagePullPolicy: IfNotPresent
           command:
           - visitorapp-operator
-          imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
               valueFrom:

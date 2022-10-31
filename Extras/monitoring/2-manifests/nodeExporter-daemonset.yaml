@@ -35,6 +35,7 @@ spec:
         - --collector.netclass.ignored-devices=^(veth.*|[a-f0-9]{15})$
         - --collector.netdev.device-exclude=^(veth.*|[a-f0-9]{15})$
         image: quay.io/prometheus/node-exporter:v1.3.1
+        imagePullPolicy: IfNotPresent
         name: node-exporter
         resources:
           limits:
@@ -71,6 +72,7 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         image: quay.io/brancz/kube-rbac-proxy:v0.11.0
+        imagePullPolicy: IfNotPresent
         name: kube-rbac-proxy
         ports:
         - containerPort: 9100

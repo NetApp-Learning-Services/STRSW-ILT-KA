@@ -191,7 +191,7 @@ spec:
           image: curtisab/visitorapp-operator:v0.0.2
           command:
           - visitorapp-operator
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:

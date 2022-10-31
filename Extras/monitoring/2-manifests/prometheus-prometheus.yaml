@@ -19,6 +19,7 @@ spec:
   enableFeatures: []
   externalLabels: {}
   image: quay.io/prometheus/prometheus:v2.33.0
+  imagePullPolicy: IfNotPresent
   nodeSelector:
     kubernetes.io/os: linux
   podMetadata:
