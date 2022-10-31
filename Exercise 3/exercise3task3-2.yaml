@@ -13,8 +13,8 @@ spec:
         run: nginx
     spec:
       containers:
-      - image: nginx
-        imagePullPolicy: Always
+      - image: nginx:1.14.2
+        imagePullPolicy: IfNotPresent
         name: nginx
         resources:
           requests:

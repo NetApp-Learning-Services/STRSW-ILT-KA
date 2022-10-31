@@ -5,7 +5,8 @@ metadata:
 spec:
   containers:
   - name: cpu-demo-ctr
-    image: vish/stress
+    image: vish/stress:latest
+    imagePullPolicy: IfNotPresent
     resources:
       requests:
         cpu: "0.5"

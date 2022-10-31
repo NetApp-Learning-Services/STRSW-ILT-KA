@@ -5,7 +5,8 @@ metadata:
 spec:
   containers:
   - name: memory-demo-ctr
-    image: polinux/stress
+    image: polinux/stress:1.0.4
+    imagePullPolicy: IfNotPresent
     resources:
       requests:
         memory: "100Mi"
