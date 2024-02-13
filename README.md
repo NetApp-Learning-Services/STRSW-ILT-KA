@@ -1,6 +1,6 @@
 # STRSW-ILT-KA
 Kubernetes Administration <br />
-Version 1.0 (March 2022) <br />
-Kubernetes v1.23 <br />
-WeaveNet 2.8.1 <br />
-Docker 20.10.12 <br />
+Version 2.0 (March 2024) <br />
+Kubernetes v1.29.1 <br />
+CNI: Weave <br />
+CRE: ContainerD 1.7.2<br />
