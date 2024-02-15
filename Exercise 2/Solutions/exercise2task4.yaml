@@ -11,7 +11,7 @@ spec:
     emptyDir: {}
   containers:
   - name: frontend
-    image: nginx:1.14.2
+    image: nginx:1.25-alpine-slim
     imagePullPolicy: IfNotPresent
     resources:
       requests:
@@ -24,7 +24,7 @@ spec:
     - name: html
       mountPath: /usr/share/nginx/html
   - name: backend
-    image: debian:10.10
+    image: debian:11.8-slim
     imagePullPolicy: IfNotPresent
     resources:
       requests:
@@ -40,5 +40,5 @@ spec:
     args:
       - while true; 
           do date >> /html/index.html;
-          sleep 1;
+          sleep 60;
         done;
