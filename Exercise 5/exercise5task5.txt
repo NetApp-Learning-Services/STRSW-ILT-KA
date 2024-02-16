@@ -1,0 +1,29 @@
+5-1
+
+kubectl create ns frontend
+kubectl label namespaces frontend role=frontend
+kubectl run web --image=nginx:1.25.4 --labels=app=web --port 80 -n frontend
+kubectl expose pod web --type=ClusterIP --port=80 -n frontend
+
+5-2
+
+kubectl create ns backend
+kubectl label namespaces backend role=backend
+kubectl run api --image=nginx:1.25.4 --labels=app=api --port 80 -n backend
+kubectl expose pod api --type=ClusterIP --port=80 -n backend
+
+5-3
+
+kubectl create ns admin
+kubectl label namespaces admin role=admin
+kubectl run admin --image=nginx:1.25.4 --labels=app=admin --port 80 -n admin
+kubectl expose pod admin --type=ClusterIP --port=80 -n admin
+
+5-4
+
+kubectl exec -it web -n frontend -- curl api.backend
+kubectl exec -it web -n frontend -- curl admin.admin
+kubectl exec -it admin -n admin -- curl web.frontend
+kubectl exec -it admin -n admin -- curl api.backend
+kubectl exec -it api -n backend -- curl web.frontend
+kubectl exec -it api -n backend -- curl admin.admin
