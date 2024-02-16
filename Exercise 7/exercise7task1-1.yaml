@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rouser-secret
+  annotations:
+    kubernetes.io/service-account.name: rouser
+type: kubernetes.io/service-account-token
