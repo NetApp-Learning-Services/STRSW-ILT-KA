@@ -1,15 +1,7 @@
 apiVersion: v1
-kind: Pod
+kind: Secret
 metadata:
-  name: alpine
-  namespace: default
-spec:
-  containers:
-  - image: alpine:3.2
-    imagePullPolicy: IfNotPresent
-    command:
-      - /bin/sh
-      - "-c"
-      - "sleep 60m"
-    name: alpine
-  restartPolicy: Always
+  name: dashboard-admin-secret
+  annotations:
+    kubernetes.io/service-account.name: dashboard-admin
+type: kubernetes.io/service-account-token
