@@ -5,7 +5,7 @@ metadata:
 spec:
   containers:
   - name: cpu-demo-ctr
-    image: vish/stress:latest
+    image: curtisab/stress:v1
     imagePullPolicy: IfNotPresent
     resources:
       requests:
