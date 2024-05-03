@@ -13,7 +13,7 @@ spec:
         run: nginx
     spec:
       containers:
-      - image: nginx:1.14.2
+      - image: nginx:1.25-alpine-slim
         imagePullPolicy: IfNotPresent
         name: nginx
         resources:

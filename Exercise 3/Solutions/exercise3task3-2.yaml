@@ -13,7 +13,7 @@ spec:
         run: nginx
     spec:
       containers:
-      - image: nginx:1.14.2
+      - image: nginx:1.25-alpine-slim
         imagePullPolicy: IfNotPresent
         name: nginx
         resources:
@@ -28,5 +28,5 @@ spec:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              - key: node-role.kubernetes.io/master
+              - key: node-role.kubernetes.io/control-plane
                 operator: Exists

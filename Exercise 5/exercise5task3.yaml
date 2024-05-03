@@ -37,7 +37,7 @@ metadata:
   namespace: default
 spec:
   containers:
-  - image: alpine:3.2
+  - image: alpine:3.19.1
     imagePullPolicy: IfNotPresent
     command:
       - /bin/sh

@@ -1,4 +1,4 @@
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: cronjob-example
@@ -14,7 +14,7 @@ spec:
         spec:
           containers:
           - name: hello
-            image: alpine:3.2
+            image: debian:11.8-slim
             imagePullPolicy: IfNotPresent
             command: ["/bin/sh", "-c"]
             args: ["echo hello from $HOSTNAME!"]
