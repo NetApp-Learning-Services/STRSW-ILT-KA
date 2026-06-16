@@ -1,1 +1,1 @@
-TOKEN=$(kubectl describe secrets "$(kubectl describe serviceaccount rouser | grep -i Tokens | awk '{print $2}')" | grep token: | awk '{print $2}')
+TOKEN=$(kubectl get secret rouser-secret -o jsonpath="{.data.token}" | base64 --decode)
