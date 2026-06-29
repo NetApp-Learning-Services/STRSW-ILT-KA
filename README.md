@@ -1,6 +1,6 @@
 # STRSW-ILT-KA
 Kubernetes Administration <br />
-Version 2.0 (March 2024) <br />
-Kubernetes v1.29 <br />
+Version 3.0 (June 2026) <br />
+Kubernetes v1.35 <br />
 CNI: Weave <br />
-CRE: ContainerD 1.7.2<br />
+CRE: ContainerD <br />

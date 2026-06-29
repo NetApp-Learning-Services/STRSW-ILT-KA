@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # This script has been written for this exercise environment
 # and is not intended to be used in a production environment.
-# Execute by: ./exercise0Task4.sh
+# Execute by: ./exercise1Task3.sh
 
 set -euo pipefail
 
